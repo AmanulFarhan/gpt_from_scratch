@@ -4,7 +4,7 @@ import ChatInput from './components/ChatInput.jsx'
 import MessageList from './components/MessageList.jsx'
 import WelcomeScreen from './components/WelcomeScreen.jsx'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://gpt-from-scratch-gy1h.onrender.com'
 
 export default function App() {
   const [messages, setMessages] = useState([])

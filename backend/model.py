@@ -66,7 +66,6 @@ class Block(nn.Module):
 
 
 class GPTLanguageModel(nn.Module):
-    """Architecture matching the GPTLanguageModel saved by flirt_gpt.ipynb V1."""
 
     def __init__(self, vocab_size: int, n_embd: int, n_head: int, n_layer: int, block_size: int):
         super().__init__()
