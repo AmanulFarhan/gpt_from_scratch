@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="FlirtGPT API", docs_url=None, redoc_url=None, lifespan=lifespan)
-origins = [origin.strip() for origin in os.getenv("FLIRTGPT_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if origin.strip()]
+origins = [origin.strip() for origin in os.getenv("FLIRTGPT_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,https://gpt-from-scratch-one.vercel.app/").split(",") if origin.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
 
 
