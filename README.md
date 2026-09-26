@@ -1,32 +1,171 @@
-# FlirtGPT
+# FlirtGPT 💬
 
-A small character-level GPT chat app powered by the existing V1 checkpoint at `flirtgpt.pt`. The app uses the model and character vocabulary saved in that checkpoint; it does not retrain the model or call an external language model.
+**A tiny GPT built from scratch, with a little personality.**
+
+FlirtGPT is a character-level language model trained from scratch in PyTorch and wrapped in a modern chat interface. This project brings the existing V1 model checkpoint into a full-stack application: React on the frontend, FastAPI on the backend, and the trained `flirtgpt.pt` checkpoint generating the replies.
+
+> FlirtGPT responses come from the locally hosted FlirtGPT model. The app does not use a third-party LLM API.
+
+**Live API:** [gpt-from-scratch-gy1h.onrender.com](https://gpt-from-scratch-gy1h.onrender.com) · [Health check](https://gpt-from-scratch-gy1h.onrender.com/api/health)
+
+## Highlights
+
+- Minimal, responsive dark chat interface with a welcome screen and clickable conversation starters.
+- Multi-turn conversations, typing feedback, auto-scroll, and a new-chat action.
+- Keyboard-friendly composer: Enter sends; Shift + Enter adds a line.
+- FastAPI endpoints for health checks and chat generation.
+- Loads the existing V1 checkpoint once when the backend starts, using CUDA when available and CPU otherwise.
+- Trims older conversation context to fit the model’s character-level context window.
+- Validates request size and history, filters model control tokens, and keeps detailed backend errors out of the UI.
+
+## Built with
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React, Vite, Tailwind CSS, lucide-react |
+| Backend | Python, FastAPI, Uvicorn, Pydantic |
+| Model | PyTorch, character-level GPT implemented from scratch |
+| Deployment | Render (API), any static hosting provider (frontend) |
+
+## How it fits together
+
+```mermaid
+flowchart LR
+    U[Browser] -->|React chat UI| F[Frontend]
+    F -->|POST /api/chat<br/>message + history| A[FastAPI]
+    A -->|prompt + character encoding| M[FlirtGPT V1]
+    M -->|generated character tokens| A
+    A -->|clean assistant response| F
+```
+
+The checkpoint and model definition are intentionally separate from the interface. `backend/model.py` recreates the V1 architecture from the configuration and vocabulary stored in `flirtgpt.pt`; it does not retrain or replace the model.
+
+## Repository layout
+
+```text
+.
+├── flirtgpt.pt                  # Trained V1 checkpoint
+├── flirt_gpt.ipynb              # Original model and training notebook
+├── backend/
+│   ├── main.py                  # FastAPI application and endpoints
+│   ├── model.py                 # V1 architecture and generation wrapper
+│   └── requirements.txt
+└── frontend/
+    ├── src/
+    │   ├── components/          # Chat UI components
+    │   ├── App.jsx
+    │   └── main.jsx
+    ├── package.json
+    └── vite.config.js
+```
 
 ## Run locally
 
-Start the API in one terminal:
+You’ll need Python 3.10 or newer, Node.js, and npm. Run the API and frontend in separate terminals from the repository root.
 
-```powershell
+### 1. Start the backend
+
+```bash
 cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
+python -m venv .venv
 ```
 
-Start the React app in another terminal:
+Activate the environment, then install and run:
+
+**macOS / Linux**
+
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Windows PowerShell**
 
 ```powershell
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The backend expects `flirtgpt.pt` at the repository root. It chooses CUDA automatically when available and otherwise uses CPU.
+
+### 2. Start the frontend
+
+In a second terminal, from the repository root:
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open the frontend at <http://localhost:5173>. The API listens at <http://localhost:8000>; its health endpoint is <http://localhost:8000/api/health>.
+Open [http://localhost:5173](http://localhost:5173). The development API URL defaults to `http://localhost:8000` when `VITE_API_URL` is set in `frontend/.env.local`; without it, the app uses the production API URL below.
 
-The backend resolves `flirtgpt.pt` from the repository root and loads it once at startup. It selects CUDA when available and otherwise CPU. Set `FLIRTGPT_CORS_ORIGINS` to a comma-separated list of allowed origins for a deployment. Set `VITE_API_URL` in the frontend environment if the API is hosted somewhere other than `http://localhost:8000`.
+Create `frontend/.env.local` for local development:
 
-## Notes
+```dotenv
+VITE_API_URL=http://localhost:8000
+```
 
-- `backend/model.py` mirrors the V1 `GPTLanguageModel` architecture and consumes the checkpoint's saved dimensions and `chars` vocabulary.
-- `backend/main.py` provides `GET /api/health` and `POST /api/chat`.
-- Conversation history is held in the browser for the current chat. “New chat” clears it.
-- Backend request validation limits each message to 2,000 characters and history to 40 messages.
+Vite reads `VITE_*` variables when it starts, so restart the dev server after changing this file.
+
+## API
+
+### `GET /api/health`
+
+Returns a simple service health response:
+
+```json
+{ "status": "ok" }
+```
+
+### `POST /api/chat`
+
+Send the current message and previous turns. The history excludes the current message, which is sent separately in `message`.
+
+```json
+{
+  "message": "You seem pretty confident.",
+  "history": [
+    { "role": "user", "content": "Hey" },
+    { "role": "assistant", "content": "Hey yourself." }
+  ]
+}
+```
+
+Response:
+
+```json
+{ "response": "Someone has to keep up with you." }
+```
+
+The API accepts `user` and `assistant` history roles, limits each message to 2,000 characters and the history to 40 entries, and returns only the generated assistant text. The frontend also strips model control tokens defensively.
+
+## Deploy
+
+### Backend on Render
+
+Create a Python Web Service connected to this repository. Set the **Root Directory** to `backend` and use:
+
+- **Build command:** `pip install -r requirements.txt`
+- **Start command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
+
+The checkpoint must be included in the repository at its root. Configure `FLIRTGPT_CORS_ORIGINS` as a comma-separated list of the exact frontend origins allowed to call the API, for example:
+
+```text
+https://your-frontend.example,https://another-allowed-origin.example
+```
+
+The default API URL in the frontend is `https://gpt-from-scratch-gy1h.onrender.com`. Set `VITE_API_URL` in the frontend hosting provider if your backend has a different URL. Frontend environment variables are embedded during the build, so redeploy after changing them.
+
+## Model notes
+
+- The final app uses the V1 `flirtgpt.pt` checkpoint.
+- The model is character-level. Its vocabulary (`chars`) and architecture dimensions are read from the checkpoint.
+- Generation uses internal defaults; chat users do not need to configure model parameters.
+- This repository does not retrain the model during app startup or make external model API calls.
+
+## License
+
+Add your preferred license before redistribution. Until a license is added, the repository has no explicit open-source license.
