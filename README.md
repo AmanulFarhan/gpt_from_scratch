@@ -159,13 +159,4 @@ https://your-frontend.example,https://another-allowed-origin.example
 
 The default API URL in the frontend is `https://gpt-from-scratch-gy1h.onrender.com`. Set `VITE_API_URL` in the frontend hosting provider if your backend has a different URL. Frontend environment variables are embedded during the build, so redeploy after changing them.
 
-## Model notes
 
-- The final app uses the V1 `flirtgpt.pt` checkpoint.
-- The model is character-level. Its vocabulary (`chars`) and architecture dimensions are read from the checkpoint.
-- Generation uses internal defaults; chat users do not need to configure model parameters.
-- This repository does not retrain the model during app startup or make external model API calls.
-
-## License
-
-Add your preferred license before redistribution. Until a license is added, the repository has no explicit open-source license.
